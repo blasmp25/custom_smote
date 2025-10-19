@@ -1,0 +1,6 @@
+dataset,best_params,best_score
+CIC_IDS2017,{'sampler__n_neighbors': 9},0.99395301743226
+UNSW,{'sampler__n_neighbors': 9},0.9962162377344954
+CREDIT,{'sampler__n_neighbors': 5},0.9990412526384552
+LITNET,{'sampler__n_neighbors': 3},1.0
+UGR,{'sampler__n_neighbors': 7},0.979763254926163

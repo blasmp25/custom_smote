@@ -1,0 +1,16 @@
+Dataset,Modelo,Mejores Parametros,CV F1 Macro
+CIC_IDS2017,Random Forest,"{'max_depth': None, 'max_features': 'log2', 'n_estimators': 200}",0.9979586676246002
+CIC_IDS2017,XGBoost,"{'learning_rate': 0.2, 'max_depth': 10, 'n_estimators': 200}",0.997267755148552
+CIC_IDS2017,LightGBM,"{'learning_rate': 0.05, 'max_depth': 20, 'n_estimators': 500, 'num_leaves': 64}",0.9977702382275432
+UNSW,Random Forest,"{'max_depth': None, 'max_features': 'sqrt', 'n_estimators': 200}",0.9979358775062185
+UNSW,XGBoost,"{'learning_rate': 0.2, 'max_depth': 6, 'n_estimators': 200}",0.9983360675603947
+UNSW,LightGBM,"{'learning_rate': 0.1, 'max_depth': -1, 'n_estimators': 500, 'num_leaves': 64}",0.998567755242247
+CREDIT,Random Forest,"{'max_depth': None, 'max_features': 'log2', 'n_estimators': 100}",0.9998743901612223
+CREDIT,XGBoost,"{'learning_rate': 0.2, 'max_depth': 10, 'n_estimators': 100}",0.9998241477375522
+CREDIT,LightGBM,"{'learning_rate': 0.1, 'max_depth': -1, 'n_estimators': 200, 'num_leaves': 31}",0.9997990246316352
+LITNET,Random Forest,"{'max_depth': None, 'max_features': 'sqrt', 'n_estimators': 100}",1.0
+LITNET,XGBoost,"{'learning_rate': 0.1, 'max_depth': 3, 'n_estimators': 100}",0.9999650264050642
+LITNET,LightGBM,"{'learning_rate': 0.1, 'max_depth': -1, 'n_estimators': 200, 'num_leaves': 31}",0.9999650264050642
+UGR,Random Forest,"{'max_depth': 20, 'max_features': 'sqrt', 'n_estimators': 100}",0.9878836471878989
+UGR,XGBoost,"{'learning_rate': 0.2, 'max_depth': 10, 'n_estimators': 200}",0.9818352544867306
+UGR,LightGBM,"{'learning_rate': 0.05, 'max_depth': 10, 'n_estimators': 500, 'num_leaves': 64}",0.9875011746027514
