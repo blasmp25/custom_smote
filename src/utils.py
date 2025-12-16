@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.base import BaseEstimator, ClassifierMixin
 import torch
-from tab_transformer_pytorch import TabTransformer
+#from tab_transformer_pytorch import TabTransformer
 from torch import nn, optim
 from torch.utils.data import DataLoader, TensorDataset
 import time
@@ -87,7 +87,8 @@ def measure_default_times(X_dict, y_dict, sampling_technique, params, n_runs=10)
     average_time = (end - start) / n_runs
     
     return average_time
-    
+ 
+"""    
 ##############################   Modelo TabTransformer
 class TabTransformerClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, num_features, dim=32, dim_out=2, depth=6, epochs=10, lr=1e-3, batch_size=32, device=None):
@@ -196,3 +197,4 @@ class TabTransformerClassifier(BaseEstimator, ClassifierMixin):
         for k, v in params.items():
             setattr(self, k, v)
         return self
+"""

@@ -11,109 +11,121 @@ como el número de características que se tendrán en cuenta. También recibe u
 """
 
 class CustomSMOTE(SMOTE):
-    _parameter_constraints = {}  # Esto permite usar GridSearchCV en el futuro
-    
-    def __init__(self, k_neighbors=5, top_k_features=5, random_state=42):
+    """
+    Variante personalizada de SMOTE para datasets multiclase, que selecciona columnas relevantes
+    mediante información mutua y genera muestras sintéticas usando min, max y mediana.
+
+    Parámetros:
+    -----------
+    k_neighbors : int, por defecto=5
+        Número de vecinos a considerar.
+    top_k_features : int, por defecto=5
+        Número de características más relevantes a modificar.
+    random_state : int, por defecto=42
+        Semilla para reproducibilidad.
+    sampling_strategy : 'auto' o dict
+        'auto': genera muestras para igualar la clase mayoritaria.
+        dict: diccionario {clase: n_muestras} para controlar el número de sintéticas por clase.
+    """
+
+    _parameter_constraints = {}  # Para compatibilidad con GridSearchCV
+
+    def __init__(self, k_neighbors=5, top_k_features=5, random_state=42, sampling_strategy='auto'):
         super().__init__(k_neighbors=k_neighbors)
         self.top_k_features = top_k_features
         self.random_state = random_state
+        self.sampling_strategy = sampling_strategy
 
     def fit_resample(self, X, y):
-        
-        """
-        Genera muestras sintéticas para balancear un conjunto de datos desbalanceado utilizando una
-        variante personalizada de SMOTE que incorpora información mutua para seleccionar atributos relevantes.
-
-        Para cada muestra de la clase minoritaria, se generan nuevas muestras tomando los valores
-        mínimo, máximo y mediana de las columnas más correlacionadas (según información mutua)
-        dentro de sus vecinos más cercanos.
-
-        Parámetros:
-        ----------
-        X : pandas.DataFrame
-            Conjunto de características (features).
-        y : pandas.Series
-            Vector de etiquetas correspondiente a X.
-        k_neighbors : int, opcional (por defecto=5)
-            Número de vecinos a considerar al buscar similitudes entre muestras minoritarias.
-        top_k_features : int, opcional (por defecto=5)
-            Número de características más relevantes (según Mutual Information) a modificar para generar muestras sintéticas.
-
-        Retorna:
-        -------
-        X_final : pandas.DataFrame
-            Conjunto de características balanceado con muestras sintéticas añadidas.
-        y_final : pandas.Series
-            Etiquetas correspondientes al conjunto X_final.
-        """  
-        
-        # Convertir a DataFrame/Series si vienen como numpy
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X)
         if not isinstance(y, pd.Series):
             y = pd.Series(y)
 
-        # Identificar clases
         class_counts = y.value_counts()
         majority_class = class_counts.idxmax()
-        minority_class = class_counts.idxmin()
-        samples_needed = class_counts[majority_class] - class_counts[minority_class]
-
-        X_minority = X[y == minority_class].reset_index(drop=True)
-        X_minority_values = X_minority.values  # Convertir a numpy para cálculo más rápido
-        
-        # Mutual Information (solo en min.)
-        mi = mutual_info_classif(X_minority, y[y == minority_class], discrete_features=False)
-        top_indices = np.argsort(mi)[-self.top_k_features:]
-
-        # Vecinos
-        nn = NearestNeighbors(n_neighbors=self.k_neighbors + 1)
-        nn.fit(X_minority)
-        neighbors = nn.kneighbors(X_minority, return_distance=False)
+        minority_classes = [c for c in class_counts.index if c != majority_class]
 
         synthetic_samples = []
-        neighbor_pointer = 1  # empieza con el más cercano
+        synthetic_labels = []
 
-        while len(synthetic_samples) < samples_needed:
-            for idx, neighbor_idx in enumerate(neighbors):
-                if len(synthetic_samples) >= samples_needed:
-                    break
+        
+        discrete_mask = []
+        for col in X.columns:
+            if X[col].dtype.name in ["object", "category", "bool"]:
+                discrete_mask.append(True)
+            elif np.issubdtype(X[col].dtype, np.integer):
+                discrete_mask.append(X[col].nunique() <= 20)
+            else:
+                discrete_mask.append(False)
+        
+        
+        
+        
+        
+        for minority_class in minority_classes:
+            y_ovr = (y==minority_class).astype(int)
+            mi = mutual_info_classif(X, y_ovr, discrete_features=discrete_mask)
+            top_indices = np.argsort(mi)[-self.top_k_features:]
+            
+            
+            X_minority = X[y == minority_class].reset_index(drop=True)
+            X_minority_values = X_minority.values
 
-                # Seleccionamos un vecino en rotación
-                current_neighbor = neighbor_idx[neighbor_pointer % (self.k_neighbors + 1)]
+            
+            
+            # Determinar cuántas muestras generar
+            if self.sampling_strategy == 'auto':
+                samples_needed = class_counts[majority_class] - class_counts[minority_class]
+            elif isinstance(self.sampling_strategy, dict):
+                samples_needed = self.sampling_strategy.get(minority_class, 0) - class_counts[minority_class]
+            else:
+                raise ValueError("sampling_strategy debe ser 'auto' o un diccionario {clase: n_muestras}")
 
-                # Evitar que sea la propia muestra
-                if current_neighbor == idx:
-                    current_neighbor = neighbor_idx[(neighbor_pointer + 1) % (self.k_neighbors + 1)]
+            if samples_needed <= 0:
+                continue
 
-                # Tomar solo las columnas relevantes de los dos vecinos (original + vecino)
-                vals = X_minority_values[[idx, current_neighbor], :][:, top_indices]
+            
 
-                # Calcular min, max y mediana de estas columnas relevantes
-                mins = vals.min(axis=0)
-                maxs = vals.max(axis=0)
-                meds = np.median(vals, axis=0)
+            # Vecinos
+            nn = NearestNeighbors(n_neighbors=min(self.k_neighbors + 1, len(X_minority)))
+            nn.fit(X_minority)
+            neighbors = nn.kneighbors(X_minority, return_distance=False)
 
-                # Base de la nueva muestra = copia de la muestra original
-                base = X_minority_values[idx].copy()
+            neighbor_pointer = 1
+            generated = 0
 
-                # Generar hasta 3 muestras: usando min, max y mediana
-                for replacement in [mins, maxs, meds]:
-                    if len(synthetic_samples) >= samples_needed:
-                        break  # Parar si ya tenemos suficientes
-                    new_sample = base.copy()
-                    new_sample[top_indices] = replacement  # Reemplazar solo las columnas más importantes
-                    synthetic_samples.append(new_sample)   # Añadir a la lista
+            while generated < samples_needed:
+                for idx, neighbor_idx in enumerate(neighbors):
+                    if generated >= samples_needed:
+                        break
 
-            neighbor_pointer += 1  # Cambiar de vecino para la siguiente iteración
+                    current_neighbor = neighbor_idx[neighbor_pointer % len(neighbor_idx)]
+                    if current_neighbor == idx:
+                        current_neighbor = neighbor_idx[(neighbor_pointer + 1) % len(neighbor_idx)]
 
-        # Dataset con las muestras sintéticas
+                    vals = X_minority_values[[idx, current_neighbor], :][:, top_indices]
+                    mins = vals.min(axis=0)
+                    maxs = vals.max(axis=0)
+                    meds = np.median(vals, axis=0)
+
+                    base = X_minority_values[idx].copy()
+
+                    for replacement in [mins, maxs, meds]:
+                        if generated >= samples_needed:
+                            break
+                        new_sample = base.copy()
+                        new_sample[top_indices] = replacement
+                        synthetic_samples.append(new_sample)
+                        synthetic_labels.append(minority_class)
+                        generated += 1
+
+                neighbor_pointer += 1
+
         X_synthetic = pd.DataFrame(synthetic_samples, columns=X.columns)
-        y_synthetic = pd.Series([minority_class] * len(X_synthetic), name=y.name if y.name else "target")
+        y_synthetic = pd.Series(synthetic_labels, name=y.name if y.name else "target")
 
-        # Unir las muestras sintéticas con los datos originales
         X_final = pd.concat([X, X_synthetic], ignore_index=True)
         y_final = pd.concat([y, y_synthetic], ignore_index=True)
 
         return X_final, y_final
-        

@@ -3,7 +3,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from IPython.display import display
+#from IPython.display import display
 
 from sklearn.preprocessing import LabelEncoder,StandardScaler
 
@@ -19,6 +19,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 from lightgbm import LGBMClassifier
 from sklearn.ensemble import RandomForestClassifier, BaggingClassifier
+from sklearn.preprocessing import FunctionTransformer
 
 from xgboost import XGBClassifier
 from pytorch_tabnet.tab_model import TabNetClassifier
@@ -26,8 +27,8 @@ from pytorch_tabnet.tab_model import TabNetClassifier
 from imblearn.pipeline import Pipeline
 from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE
 
-from src.custom_smote import CustomSMOTE
-from src.utils import TabTransformerClassifier
+from .custom_smote import CustomSMOTE
+#from .utils import TabTransformerClassifier
 
 # Función para optimizar parámetros de una técnica de sobremuestreo
 def tune_sampler_for_dataset(X_train, y_train, dataset_name, smote_type, results_csv):
@@ -123,7 +124,7 @@ def tune_sampler_for_dataset(X_train, y_train, dataset_name, smote_type, results
 
     # GridSearch
     print(f"🔍 Buscando mejores hiperparámetros para {dataset_name} con {smote_type}...")
-    grid = GridSearchCV(pipe, param_grid, scoring=scorer, cv=cv, n_jobs=-1, verbose=2)
+    grid = GridSearchCV(pipe, param_grid, scoring=scorer, cv=cv, n_jobs=-1, verbose=0, error_score=np.nan)
     grid.fit(X_train, y_train)
 
     # Guardar resultados
@@ -142,6 +143,53 @@ def tune_sampler_for_dataset(X_train, y_train, dataset_name, smote_type, results
         "best_score": grid.best_score_
     }
 
+
+def tune_sampler_for_dataset(X_train, y_train, smote_type):
+    """
+    Ajusta hiperparámetros de un sampler (SMOTE, CustomSMOTE, ADASYN, Borderline-SMOTE)
+    usando RandomForest como modelo base.
+    Retorna un dict con 'best_params' y 'best_score'.
+    """
+
+    X_train = X_train.astype(float)
+    y_train = y_train.astype(int)
+    
+    rf = RandomForestClassifier(random_state=42)
+
+    if smote_type == "customsmote":
+        pipe = Pipeline([('sampler', CustomSMOTE(random_state=42)), ('clf', rf)])
+        param_grid = {
+            'sampler__k_neighbors': [3, 5, 7, 9],
+            'sampler__top_k_features': [3, 5, 7, 10]
+        }
+    elif smote_type == "smote":
+        pipe = Pipeline([('sampler', SMOTE(random_state=42)), ('clf', rf)])
+        param_grid = {'sampler__k_neighbors': [3, 5, 7, 9]}
+    elif smote_type == "adasyn":
+        pipe = Pipeline([('sampler', ADASYN(random_state=42)), ('clf', rf)])
+        param_grid = {'sampler__n_neighbors': [3, 5, 7, 9]}
+    elif smote_type == "borderline":
+        pipe = Pipeline([('sampler', BorderlineSMOTE(random_state=42)), ('clf', rf)])
+        param_grid = {'sampler__k_neighbors': [3, 5, 7, 9], 'sampler__kind': ['borderline-1', 'borderline-2']}
+    else:
+        raise ValueError("smote_type debe ser uno de: 'customsmote', 'smote', 'adasyn', 'borderline'")
+
+    cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+    scorer = make_scorer(f1_score, average='weighted')
+
+    grid = GridSearchCV(pipe, param_grid, scoring=scorer, cv=cv, n_jobs=-1, verbose=0, error_score=np.nan)
+    
+    try:
+        grid.fit(X_train, y_train)
+
+    except Exception as e:
+        print(f"{smote_type} failed on this dataset.")
+        return None
+    
+    return {
+        'best_params': grid.best_params_,
+        'best_score': grid.best_score_
+    }
 
 def optimize_models_parameters(X_dict,y_dict,models,param_grids,results_csv):
 
@@ -221,8 +269,8 @@ def optimize_models_parameters(X_dict,y_dict,models,param_grids,results_csv):
                         X, y, train_size=200, stratify=y, random_state=42
                     )
                     
-            if model_name == "TabTransformer":
-                model = TabTransformerClassifier(num_features=X.shape[1])
+            #if model_name == "TabTransformer":
+             #   model = TabTransformerClassifier(num_features=X.shape[1])
             
             # Definir GridSearchCV
             grid = GridSearchCV(
@@ -231,7 +279,8 @@ def optimize_models_parameters(X_dict,y_dict,models,param_grids,results_csv):
                 cv=cv,
                 scoring="f1_macro",   # métrica principal
                 n_jobs=-1,
-                verbose=0
+                verbose=0,
+                error_score=np.nan
             )
 
             # Entrenamiento
@@ -262,17 +311,72 @@ def optimize_models_parameters(X_dict,y_dict,models,param_grids,results_csv):
             df_results.to_csv(results_path, index=False)
 
     print("\n✅ Optimización completada")
-    display(df_results)
+    #display(df_results)
+
+
+from sklearn.model_selection import StratifiedKFold, GridSearchCV
+import numpy as np
+
+def optimize_models_parameters(X, y, models, param_grids):
+    """
+    Optimiza hiperparámetros de varios modelos usando GridSearchCV para un dataset.
+    
+    :param X: pd.DataFrame o np.array, features de entrenamiento
+    :param y: pd.Series o np.array, etiquetas de entrenamiento
+    :param models: dict, modelos a entrenar
+    :param param_grids: dict, grids de hiperparámetros para cada modelo
+    :return: dict, {model_name: {"best_params": ..., "best_score": ...}}
+    """
+    
+    results = {}
+    cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+    
+    for model_name, model in models.items():
+        print(f"   ⚙️ Optimizing {model_name} ...")
+        
+        # Manejo especial si el modelo requiere array en lugar de DataFrame
+        X_fit = X.values if hasattr(X, "values") else X
+        y_fit = y.values if hasattr(y, "values") else y
+        
+        # Ajustes especiales
+        if model_name == "SVM" and len(X_fit) > 2000:
+            X_fit, _, y_fit, _ = train_test_split(
+                X_fit, y_fit, train_size=2000, stratify=y_fit, random_state=42
+            )
+        #if model_name == "TabTransformer":
+        #    model = TabTransformerClassifier(num_features=X_fit.shape[1])
+        
+        # GridSearchCV
+        grid = GridSearchCV(
+            estimator=model,
+            param_grid=param_grids[model_name],
+            cv=cv,
+            scoring="f1_macro",
+            n_jobs=-1,
+            verbose=0,
+            error_score=np.nan
+        )
+        
+        X_fit = np.array(X_fit, dtype=np.float32, copy=True)
+        y_fit = np.array(y_fit, dtype=np.int64, copy=True)
+        
+        grid.fit(X_fit, y_fit)
+        
+        results[model_name] = grid.best_params_
+            
+        
+        
+    return results
 
 
 # Función que evalua un modelo sobre un conjunto de datos y devuelve las métricas de evaluación en un diccionario
 def evaluate_model(name, model, X, y, kf):
     scoring = {
         "accuracy": make_scorer(accuracy_score),
-        "precision": make_scorer(precision_score, zero_division=0),
-        "recall": make_scorer(recall_score, zero_division=0),
-        "f1": make_scorer(f1_score, zero_division=0),
-        "roc_auc": make_scorer(roc_auc_score)
+        "precision": make_scorer(precision_score, zero_division=0, average='weighted'),
+        "recall": make_scorer(recall_score, zero_division=0, average='weighted'),
+        "f1": make_scorer(f1_score, zero_division=0, average='weighted'),
+        #"roc_auc": make_scorer(roc_auc_score, multi_class='ovr', average='weighted')
     }
     scores = cross_validate(model, X, y, cv=kf, scoring=scoring)
 
@@ -281,8 +385,8 @@ def evaluate_model(name, model, X, y, kf):
         "Accuracy": scores['test_accuracy'].mean(),
         "Precision": scores['test_precision'].mean(),
         "Recall": scores['test_recall'].mean(),
-        "F1": scores['test_f1'].mean(),
-        "ROC AUC": scores['test_roc_auc'].mean()
+        "F1": scores['test_f1'].mean()
+        #"ROC AUC": scores['test_roc_auc'].mean()
     }
 
     return results
@@ -363,10 +467,10 @@ def evaluate_models(X_dict, y_dict, best_params, results_csv, model_list=None):
                 random_state=42, **best_params[ds_name]["LightGBM"]["best_params"]
             )
             
-        if "TabTransformer" in best_params[ds_name]:
-            all_models["TabTransformer"] = TabTransformerClassifier(
-                num_features=X.shape[1], **best_params[ds_name]["TabTransformer"]["best_params"]
-            )
+        #if "TabTransformer" in best_params[ds_name]:
+        #    all_models["TabTransformer"] = TabTransformerClassifier(
+        #        num_features=X.shape[1], **best_params[ds_name]["TabTransformer"]["best_params"]
+        #    )
 
         # Si el usuario especifica una lista, filtramos
         models = {name: model for name, model in all_models.items() if (model_list is None or name in model_list)}
@@ -392,3 +496,37 @@ def evaluate_models(X_dict, y_dict, best_params, results_csv, model_list=None):
 
     print("🎉 Evaluación completada. Resultados guardados en", results_path)
 
+
+def evaluate_models(X, y, models, best_model_params, kf_splits=10):
+    """
+    Evalúa un conjunto de modelos en un dataset dado usando los mejores parámetros.
+    
+    :param X: pd.DataFrame o np.array, features
+    :param y: pd.Series o np.array, labels
+    :param models: dict de modelos, {nombre: instancia_clase_sklearn}
+    :param best_model_params: dict con mejores parámetros por modelo {nombre: dict de params}
+    :param kf_splits: int, número de splits para StratifiedKFold
+    :return: dict {modelo: métricas}
+    """
+    from sklearn.model_selection import StratifiedKFold
+    kf = StratifiedKFold(n_splits=kf_splits, shuffle=True, random_state=42)
+    
+    results = {}
+    
+    for model_name, model_class in models.items():
+        if model_name not in best_model_params:
+            print(f"⚠️ No hay mejores parámetros para {model_name}, saltando...")
+            continue
+        
+        # Reconstruir modelo con los mejores parámetros
+        params = best_model_params[model_name]
+        model = model_class.__class__(**params)
+        
+        X_arr = np.array(X, dtype=np.float32, copy=True)
+        y_arr = np.array(y, dtype=np.int64, copy=True)
+        
+        # Asumimos que tienes una función `evaluate_model` que devuelve métricas
+        metrics = evaluate_model(model_name, model, X_arr, y_arr, kf)
+        results[model_name] = metrics
+    
+    return results
