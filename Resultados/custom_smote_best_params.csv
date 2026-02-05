@@ -1,6 +1,0 @@
-dataset,smote_type,best_params,best_score
-CIC_IDS2017,,"{'sampler__k_neighbors': 3, 'sampler__top_k_features': 5}",0.9951991972891772
-UNSW,,"{'sampler__k_neighbors': 3, 'sampler__top_k_features': 3}",0.9960232452368328
-CREDIT,,"{'sampler__k_neighbors': 5, 'sampler__top_k_features': 10}",0.9990813932679264
-LITNET,,"{'sampler__k_neighbors': 3, 'sampler__top_k_features': 3}",1.0
-UGR,,"{'sampler__k_neighbors': 3, 'sampler__top_k_features': 3}",0.9788687354310042
