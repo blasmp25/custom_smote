@@ -1,0 +1,229 @@
+RESULTS SUMMARY REPORT
+==========================================================================================
+
+
+================ Dataset: abalone.csv | Classes: 3 | Imbalance rate: 1.39 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+      smote Random Forest   0.6 0.673723  0.685008   0.686879 0.665453
+customsmote Random Forest   1.0 0.668714  0.675439   0.670132 0.668296
+ borderline Random Forest   1.0 0.665746  0.673046   0.664098 0.667600
+   Original Random Forest  None 0.662480  0.680223   0.689693 0.649886
+     adasyn Random Forest   1.0 0.655019  0.659490   0.650473 0.661653
+
+================ Dataset: balance-scale.csv | Classes: 3 | Imbalance rate: 2.92 ================
+
+    sampler    model ratio       f1  accuracy  precision   recall
+customsmote LightGBM   1.0 0.730367  0.856383   0.727778 0.734722
+      smote  XGBoost   1.0 0.677258  0.882979   0.730433 0.680556
+ borderline LightGBM   0.8 0.660741  0.861702   0.684737 0.664815
+   Original  XGBoost  None 0.644051  0.872340   0.673707 0.658333
+
+================ Dataset: cancer-risk-factors.csv | Classes: 5 | Imbalance rate: 1.38 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+      smote      LightGBM   1.0 0.733128  0.748333   0.734901 0.732319
+   Original      LightGBM  None 0.730439  0.748333   0.735266 0.728565
+ borderline      LightGBM   1.0 0.727773  0.745000   0.729451 0.727013
+customsmote Random Forest   1.0 0.725614  0.743333   0.729147 0.727978
+
+================ Dataset: car.csv | Classes: 4 | Imbalance rate: 10.51 ================
+
+    sampler    model ratio       f1  accuracy  precision   recall
+ borderline  XGBoost   0.8 0.939683  0.984586   0.928033 0.952674
+   Original LightGBM  None 0.928973  0.982659   0.918001 0.942258
+      smote LightGBM   0.6 0.928973  0.982659   0.918001 0.942258
+     adasyn  XGBoost   0.8 0.927587  0.980732   0.915883 0.941559
+customsmote LightGBM   0.6 0.918274  0.980732   0.908696 0.931841
+
+================ Dataset: cleveland_0_vs_4.csv | Classes: 2 | Imbalance rate: 5.50 ================
+
+    sampler    model ratio       f1  accuracy  precision  recall
+   Original  XGBoost  None 0.894949  0.980769   0.833333    0.99
+     adasyn  XGBoost   0.6 0.894949  0.980769   0.833333    0.99
+ borderline LightGBM   0.6 0.894949  0.980769   0.833333    0.99
+customsmote  XGBoost   0.6 0.894949  0.980769   0.833333    0.99
+      smote LightGBM   0.6 0.894949  0.980769   0.833333    0.99
+
+================ Dataset: cmc.csv | Classes: 3 | Imbalance rate: 1.36 ================
+
+    sampler    model ratio       f1  accuracy  precision   recall
+ borderline  XGBoost   0.8 0.562094  0.574661   0.563296 0.564842
+customsmote  XGBoost   0.8 0.556771  0.570136   0.555878 0.560791
+   Original  XGBoost  None 0.555911  0.585973   0.582674 0.555877
+      smote LightGBM   0.6 0.554207  0.581448   0.557108 0.553693
+
+================ Dataset: credit.csv | Classes: 2 | Imbalance rate: 255.59 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+customsmote       XGBoost   0.6 0.920965  0.999649   0.944327 0.899941
+   Original       XGBoost  None 0.888772  0.999532   0.937324 0.849941
+ borderline Random Forest   0.6 0.880806  0.999415   0.863519 0.899824
+      smote      LightGBM   0.6 0.849824  0.999298   0.849824 0.849824
+     adasyn Random Forest   0.6 0.833128  0.999181   0.818006 0.849766
+
+================ Dataset: dermatology.csv | Classes: 6 | Imbalance rate: 2.10 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+ borderline Random Forest   1.0 0.989202  0.990909   0.990196 0.988889
+customsmote      LightGBM   0.6 0.978472  0.981818   0.978472 0.978472
+   Original Random Forest  None 0.956583  0.963636   0.959402 0.956250
+      smote Random Forest   0.6 0.956583  0.963636   0.959402 0.956250
+
+================ Dataset: diabetes.csv | Classes: 2 | Imbalance rate: 1.43 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+   Original      LightGBM  None 0.732285  0.757576   0.732285 0.732285
+customsmote Random Forest   0.6 0.732285  0.757576   0.732285 0.732285
+ borderline Random Forest   0.8 0.728641  0.744589   0.724381 0.739983
+      smote Random Forest   0.8 0.724761  0.744589   0.720961 0.731167
+     adasyn       XGBoost   1.0 0.720666  0.735931   0.716880 0.733361
+
+================ Dataset: dry_bean.csv | Classes: 7 | Imbalance rate: 2.55 ================
+
+    sampler    model ratio  f1  accuracy  precision  recall
+   Original  XGBoost  None 1.0       1.0        1.0     1.0
+     adasyn  XGBoost   0.6 1.0       1.0        1.0     1.0
+ borderline  XGBoost   0.6 1.0       1.0        1.0     1.0
+customsmote  XGBoost   0.6 1.0       1.0        1.0     1.0
+      smote LightGBM   0.6 1.0       1.0        1.0     1.0
+
+================ Dataset: ecoli.csv | Classes: 4 | Imbalance rate: 2.62 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+     adasyn Random Forest   0.8 0.939899  0.940594   0.942708 0.937794
+customsmote Random Forest   0.8 0.939899  0.940594   0.942708 0.937794
+   Original Random Forest  None 0.926417  0.930693   0.932532 0.921128
+ borderline      LightGBM   1.0 0.923532  0.920792   0.920692 0.926925
+      smote      LightGBM   0.6 0.923532  0.920792   0.920692 0.926925
+
+================ Dataset: flare-F.csv | Classes: 2 | Imbalance rate: 12.43 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+      smote Random Forest   0.8 0.711849  0.946875   0.684511 0.751315
+ borderline      LightGBM   1.0 0.706856  0.959375   0.737097 0.684164
+     adasyn       XGBoost   0.6 0.687805  0.953125   0.695346 0.680907
+   Original       XGBoost  None 0.679975  0.959375   0.735577 0.647331
+customsmote      LightGBM   0.6 0.674254  0.921875   0.634295 0.775119
+
+================ Dataset: healthcare-stroke.csv | Classes: 2 | Imbalance rate: 12.54 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+customsmote Random Forest   0.8 0.582906  0.898846   0.569402 0.610858
+      smote       XGBoost   0.8 0.571542  0.931432   0.586394 0.562113
+     adasyn Random Forest   1.0 0.553800  0.928038   0.564371 0.547154
+ borderline       XGBoost   1.0 0.541625  0.930075   0.555019 0.535049
+   Original Random Forest  None 0.501342  0.951799   0.975883 0.506944
+
+================ Dataset: landsat_satellite.csv | Classes: 6 | Imbalance rate: 1.67 ================
+
+    sampler    model ratio       f1  accuracy  precision   recall
+      smote LightGBM   1.0 0.906063  0.916106   0.908227 0.904539
+ borderline LightGBM   1.0 0.905197  0.915588   0.908604 0.902853
+customsmote LightGBM   0.8 0.903174  0.915070   0.906456 0.900846
+   Original  XGBoost  None 0.898996  0.910927   0.904331 0.895227
+
+================ Dataset: new_thyroid.csv | Classes: 3 | Imbalance rate: 3.35 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+ borderline Random Forest   0.6 1.000000  1.000000   1.000000 1.000000
+   Original Random Forest  None 0.974194  0.984615   0.992908 0.958333
+     adasyn Random Forest   0.6 0.974194  0.984615   0.992908 0.958333
+customsmote Random Forest   0.6 0.974194  0.984615   0.992908 0.958333
+      smote Random Forest   0.6 0.974194  0.984615   0.992908 0.958333
+
+================ Dataset: occupancy.csv | Classes: 2 | Imbalance rate: 2.15 ================
+
+    sampler    model ratio       f1  accuracy  precision   recall
+customsmote  XGBoost   0.8 0.991957  0.994326   0.990616 0.993315
+      smote LightGBM   0.8 0.991721  0.994163   0.990743 0.992708
+     adasyn LightGBM   0.6 0.991274  0.993839   0.989575 0.993000
+   Original  XGBoost  None 0.990574  0.993353   0.989477 0.991682
+ borderline  XGBoost   0.8 0.990569  0.993353   0.989714 0.991431
+
+================ Dataset: page_blocks.csv | Classes: 5 | Imbalance rate: 61.70 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+customsmote      LightGBM   0.8 0.877783  0.973203   0.860686 0.897810
+ borderline Random Forest   0.8 0.874671  0.975030   0.860772 0.889709
+   Original      LightGBM  None 0.865420  0.974421   0.874051 0.857939
+      smote      LightGBM   0.8 0.860020  0.972594   0.826418 0.904017
+     adasyn       XGBoost   1.0 0.854525  0.968940   0.803761 0.918024
+
+================ Dataset: poker-8vs6.csv | Classes: 2 | Imbalance rate: 39.73 ================
+
+    sampler         model ratio       f1  accuracy  precision  recall
+customsmote       XGBoost   0.6 0.928004  0.997748   0.998866   0.875
+ borderline       XGBoost   0.8 0.832200  0.995495   0.997738   0.750
+     adasyn       XGBoost   0.6 0.832200  0.995495   0.997738   0.750
+      smote       XGBoost   0.6 0.832200  0.995495   0.997738   0.750
+   Original Random Forest  None 0.497738  0.990991   0.495495   0.500
+
+================ Dataset: shuttle.csv | Classes: 3 | Imbalance rate: 6.65 ================
+
+    sampler         model ratio     f1  accuracy  precision   recall
+     adasyn       XGBoost   1.0 1.0000  1.000000   1.000000 1.000000
+      smote Random Forest   0.8 1.0000  1.000000   1.000000 1.000000
+customsmote Random Forest   1.0 1.0000  1.000000   1.000000 1.000000
+   Original Random Forest  None 0.9962  0.996928   0.998693 0.993769
+ borderline Random Forest   0.6 0.9962  0.996928   0.998693 0.993769
+
+================ Dataset: steel-plates-faults.csv | Classes: 7 | Imbalance rate: 4.64 ================
+
+    sampler    model ratio       f1  accuracy  precision   recall
+customsmote  XGBoost   0.8 0.836845  0.819897   0.835047 0.840234
+ borderline LightGBM   1.0 0.828938  0.814751   0.823187 0.838993
+   Original  XGBoost  None 0.828596  0.811321   0.825920 0.833824
+      smote  XGBoost   0.8 0.827708  0.818182   0.813668 0.846081
+     adasyn LightGBM   1.0 0.814838  0.807890   0.797479 0.840655
+
+================ Dataset: Student_performance.csv | Classes: 5 | Imbalance rate: 4.64 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+   Original      LightGBM  None 0.874201  0.923398   0.908356 0.849954
+customsmote Random Forest   0.8 0.872262  0.920613   0.897203 0.853242
+      smote Random Forest   1.0 0.871496  0.920613   0.897860 0.851224
+ borderline Random Forest   1.0 0.871112  0.920613   0.904477 0.847663
+     adasyn Random Forest   1.0 0.865689  0.916435   0.888241 0.847681
+
+================ Dataset: thyroid.csv | Classes: 3 | Imbalance rate: 25.67 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+     adasyn Random Forest   0.8 0.948236  0.986111   0.909091 0.994924
+      smote       XGBoost   0.6 0.933089  0.981481   0.886364 0.993232
+ borderline       XGBoost   0.8 0.933089  0.981481   0.886364 0.993232
+   Original       XGBoost  None 0.932945  0.981481   0.883838 0.993232
+customsmote Random Forest   0.6 0.932945  0.981481   0.883838 0.993232
+
+================ Dataset: vowel0.csv | Classes: 2 | Imbalance rate: 5.86 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+ borderline Random Forest   0.6 0.990865  0.996633   0.998127 0.983871
+      smote      LightGBM   0.6 0.990865  0.996633   0.998127 0.983871
+customsmote      LightGBM   0.6 0.990865  0.996633   0.998127 0.983871
+     adasyn       XGBoost   0.6 0.981991  0.993266   0.981991 0.981991
+   Original      LightGBM  None 0.952954  0.983165   0.974708 0.933604
+
+================ Dataset: whine.csv | Classes: 3 | Imbalance rate: 6.36 ================
+
+    sampler         model ratio       f1  accuracy  precision   recall
+customsmote Random Forest   0.8 0.713634  0.815646   0.767805 0.681355
+   Original Random Forest  None 0.708930  0.810884   0.861537 0.654597
+ borderline Random Forest   1.0 0.708442  0.800000   0.796732 0.669289
+      smote      LightGBM   0.6 0.702256  0.804082   0.737655 0.677238
+     adasyn      LightGBM   1.0 0.701652  0.797959   0.713927 0.691566
+
+================ Dataset: yeast.csv | Classes: 9 | Imbalance rate: 9.40 ================
+
+    sampler    model ratio       f1  accuracy  precision   recall
+   Original  XGBoost  None 0.590618  0.583333   0.646876 0.575845
+      smote  XGBoost   0.8 0.586204  0.560811   0.583247 0.591462
+ borderline  XGBoost   0.6 0.564171  0.560811   0.582163 0.556863
+customsmote LightGBM   0.6 0.563709  0.567568   0.551563 0.581440
+
+Saved ranking plots:
+- mean_rank_all.png
+- mean_rank_binary.png
+- mean_rank_multiclass.png
+
+End of report.
