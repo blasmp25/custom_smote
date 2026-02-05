@@ -1,35 +1,18 @@
-# Proyecto de Sobremuestreo y Evaluación de Modelos
+# Oversampling and Model Evaluation Project
 
-Este repositorio contiene el código, los datasets y los resultados generados durante el desarrollo del presente trabajo, centrado en técnicas de sobremuestreo y evaluación de modelos de clasificación.  
+This repository contains the code, datasets, and results generated during the development of this work, focused on oversampling techniques and the evaluation of classification models. 
 
-## Contenido del proyecto
+## Project contents
 
-El archivo entregado tiene la siguiente estructura:
+The submitted package has the following structure:
 
-├── Datasets/ # Contiene los cinco conjuntos de datos utilizados, en formato CSV
-├── Resultados/ # Contiene los resultados obtenidos del proyecto en CSV
-├── src/ # Código fuente del proyecto
-│ ├── custom_smote.py # Implementación de la variante propuesta de SMOTE
-│ ├── experiments.py # Funciones para ejecutar experimentos, optimización de parámetros y evaluación de modelos
-│ └── utils.py # Funciones auxiliares utilizadas en el proyecto
-└── requirements.txt # Librerías necesarias para ejecutar el proyecto
+├── Datasets/        # Contains the five datasets used, in CSV format
+├── Results/         # Contains the results obtained in the project, in CSV format
+├── src/             # Project source code
+│   ├── custom_smote.py   # Implementation of the proposed SMOTE variant
+│   ├── experiments.py    # Functions to run experiments, hyperparameter optimization, and model evaluation
+│   ├── utils.py          # Auxiliary functions used in the project
+│   └── pipeline.py       # Main pipeline that integrates data loading, preprocessing, oversampling, training, and evaluation
+└── requirements.txt      # Required libraries to run the project
 
-
-
-## Descripción de carpetas y archivos
-
-- **Datasets/**: Contiene los cinco conjuntos de datos utilizados en el proyecto, todos en formato CSV.  
-- **Resultados/**: Almacena los resultados obtenidos del proyecto, incluyendo:  
-  - Parámetros óptimos encontrados para cada técnica de sobremuestreo.  
-  - Parámetros óptimos encontrados para cada modelo.  
-  - Métricas de evaluación de cada modelo aplicado a cada dataset.  
-
-- **src/**: Código fuente del proyecto, que incluye:  
-  - `custom_smote.py`: Implementación de la variante propuesta de SMOTE.  
-  - `experiments.py`: Funciones para ejecutar experimentos, optimización de parámetros y evaluación de modelos.  
-  - `utils.py`: Funciones auxiliares utilizadas a lo largo del proyecto.  
-
-
-- `requirements.txt`: Contiene todas las librerías necesarias para ejecutar el proyecto. Para instalarlas, ejecutar:  
-
-pip install -r requirements.txt
+To execute the project: python -m src.pipeline 
