@@ -14,18 +14,10 @@ from sklearn.exceptions import DataConversionWarning
 # Ignorar solo los warnings de DataConversionWarning (nombre de columnas)
 warnings.filterwarnings("ignore", category=UserWarning, message="X does not have valid feature names*")
 
-
-# Modelos que serán utilizados en el entrenamiento
 MODELS = {
-    #'Decision Tree': DecisionTreeClassifier(random_state=42),
     'Random Forest': RandomForestClassifier(random_state=42),
-    #'Bagging': BaggingClassifier(estimator=DecisionTreeClassifier(), random_state=42),
     'XGBoost': XGBClassifier(eval_metric='logloss', random_state=42),
-    #'MLP': MLPClassifier(max_iter=500, random_state=42),
-    #'TabNet': TabNetClassifier(verbose=0, seed=42),
-    #'SVM': SVC(probability=True, random_state=42),
     'LightGBM': LGBMClassifier(random_state=42, verbosity=-1)
-    #'TabTransformer': None
 }
 
 MODELS_MAP = {
@@ -36,53 +28,29 @@ MODELS_MAP = {
 
 # Parámetros a optimizar para cada modelo
 param_grids = {
-    "Decision Tree": {
-        "max_depth": [3, 5, 10, None],
-        "min_samples_split": [2, 5, 10]
-    },
+    
     "Random Forest": {
         "n_estimators": [100, 200],
         "max_depth": [None, 10, 20],
         "max_features": ["sqrt", "log2"]
     },
-    "Bagging": {
-        "n_estimators": [50, 100, 200],
-        "max_samples": [0.5, 0.8, 1.0]
-    },
+    
     "XGBoost": {
         "n_estimators": [100, 200],
         "max_depth": [3, 6, 10],
         "learning_rate": [0.01, 0.1, 0.2]
     },
-    "MLP": {
-        "hidden_layer_sizes": [(50,), (100,), (100,50)],
-        "activation": ["relu", "tanh"],
-        "alpha": [0.0001, 0.001],
-    },
-    "TabNet": {
-        "n_d": [8, 16],
-        "n_a": [8, 16],
-        "n_steps": [3, 5],
-        "gamma": [1.0, 1.5],
-    },
-    "SVM": {
-        "C": [0.1, 1, 10],
-        "gamma": ["scale", "auto"],
-        "kernel": ["rbf", "poly"]
-    },
+    
     "LightGBM": {
         "n_estimators": [200, 500],
         "num_leaves": [31, 64],
         "learning_rate": [0.01, 0.05, 0.1],
         "max_depth": [-1, 10, 20]
-    },
-    "TabTransformer" :{
-    "dim": [16, 32, 64],
-    "depth": [3, 6, 8],
-    "epochs": [10, 20],
-    "lr": [0.001, 0.0005]
     }
 }
+
+SAMPLING_RATIOS = [0.6, 0.8, 1.0]
+
 
 def run_training_pipeline(
     prepared_datasets: dict,
@@ -134,12 +102,14 @@ def run_training_pipeline(
         
         X_train_orig = data["X_train"]
         y_train_orig = data["y_train"]
+        X_test_orig = data["X_test"]
+        y_test_orig = data["y_test"]
         
         print("Optimizing models parameters...")
         best_model_params = optimize_models_parameters(X_train_orig, y_train_orig, models, param_grids)
         
         print("Evaluating models...")
-        metrics = evaluate_models(X_train_orig, y_train_orig, models, best_model_params)
+        metrics = evaluate_models(X_train_orig, y_train_orig, X_test_orig, y_test_orig, models, best_model_params)
         
         results[ds_name]["Original"]["models"] = {
             m: {"best_params": best_model_params[m], "metrics": metrics[m]}
@@ -198,13 +168,60 @@ def run_training_pipeline(
             print("Optimizing models parameters...")
             best_model_params = optimize_models_parameters(X_res, y_res, models, param_grids)
             
-            print("Evaluating models...")
-            metrics = evaluate_models(X_res, y_res, models, best_model_params)
+            results[ds_name][sampler_type]["best_model_params"] = best_model_params
             
-            results[ds_name][sampler_type]["models"] = {
-                m: {"best_params" : best_model_params[m], "metrics": metrics[m]}
-                for m in best_model_params
-            }
+            print("Evaluating models...")
+            
+            results[ds_name][sampler_type]["ratios"] = {}
+            for ratio in SAMPLING_RATIOS:
+            
+                # Determinar sampling_strategy según si es binario o multiclase
+                class_counts = y_train_orig.value_counts()
+                majority_class = class_counts.idxmax()
+                minority_classes = [c for c in class_counts.index if c != majority_class]
+
+                
+                sampling_strategy = {
+                    c: max(class_counts[c], int(class_counts[majority_class] * ratio))
+                    for c in minority_classes
+                    }
+
+
+                
+                
+                if sampler_type == "smote":
+                    sampler_ratio = SMOTE(
+                        k_neighbors=sampler_params['best_params']['sampler__k_neighbors'],
+                        random_state=42,
+                        sampling_strategy=sampling_strategy
+                    )
+                elif sampler_type == "customsmote":
+                    sampler_ratio = CustomSMOTE(
+                        k_neighbors=sampler_params['best_params']['sampler__k_neighbors'],
+                        top_k_features=sampler_params['best_params']['sampler__top_k_features'],
+                        sampling_strategy=sampling_strategy
+                    )
+                elif sampler_type == "adasyn":
+                    sampler_ratio = ADASYN(
+                        n_neighbors=sampler_params['best_params']['sampler__n_neighbors'],
+                        sampling_strategy=sampling_strategy
+                    )
+                elif sampler_type == "borderline":
+                    sampler_ratio = BorderlineSMOTE(
+                        k_neighbors=sampler_params['best_params']['sampler__k_neighbors'],
+                        kind=sampler_params['best_params']['sampler__kind'],
+                        sampling_strategy=sampling_strategy
+                    )
+                    
+                try:
+                    X_res_r, y_res_r = sampler_ratio.fit_resample(X_train_orig, y_train_orig)
+                except ValueError as e:
+                    print(f"[WARN] {sampler_type} with ratio {ratio} failed: {e}")
+                    continue  # pasa al siguiente ratio si falla
+                
+                metrics = evaluate_models(X_res_r, y_res_r, X_test_orig, y_test_orig, models, best_model_params)
+                
+                results[ds_name][sampler_type]["ratios"][f"ratio_{ratio}"] = metrics
             
     # Save results
     with open(results_file, "wb") as f:
@@ -219,7 +236,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run training pipeline")
     
     parser.add_argument(
-        "--datasets",
+        "--datasets",   
         nargs="+",
         default=None,
         help= "List of dataset filenames to process. Default: all CSVs in the datasets/ directory."

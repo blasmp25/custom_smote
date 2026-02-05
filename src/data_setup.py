@@ -1,10 +1,12 @@
 import os
 import pandas as pd
+import numpy as np
 from typing import List, Dict, Optional, Tuple
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SelectKBest, f_classif
 
-DATASET_DIR = "datasets/"
+DATASET_DIR = "Datasets/"
 
 def load_datasets(names: Optional[List[str]]=None) -> Dict[str, pd.DataFrame]:
     """
@@ -91,47 +93,42 @@ def create_train_test_splits(XY_dict: Dict[str, Tuple],
     return result
 
 
-def apply_feature_selection(
-    split_dict: Dict[str, Dict[str, object]],
-    k: int = 40
+def apply_scaling(
+    split_dict: Dict[str, Dict[str, object]]
 ) -> Dict[str, Dict[str, object]]:
     """
-    Applies feature selection to the datasets in split_dict.
-    Returns the same dictionary structure, replacing X_train/X_test
-    with the selected features. y_train/y_test remain unchanged.
-
-    :param split_dict: Dict returned by create_train_test_splits()
-    :param k: Number of features to keep if feature selection is applied
-    :return: Updated split_dict with transformed X_train/X_test
+    Applies standard scaling to all numerical features.
+    The scaler is fitted ONLY on X_train to avoid data leakage.
     """
     
-    print("[INFO] Applying feature selection if necessary...")
+    print("[INFO] Applying standard scaling to numerical features...")
     
     for name, data in split_dict.items():
         X_train = data["X_train"]
         X_test = data["X_test"]
-        y_train = data["y_train"]
         
-        # If the dataset has more columns than k → apply feature selection
-        if X_train.shape[1] > k:
-            selector = SelectKBest(score_func=f_classif, k=k)
-            selector.fit(X_train, y_train)
-            
-            selected_cols = X_train.columns[selector.get_support()]
-            
-            # update X_train and X_test
-            data["X_train"] = pd.DataFrame(
-                selector.transform(X_train),
-                columns=selected_cols,
-                index=X_train.index
-            )
-            
-            data["X_test"] = pd.DataFrame(
-                selector.transform(X_test),
-                columns=selected_cols,
-                index=X_test.index
-            )
-            
+        # Detect numerical columns automatically
+        num_cols = X_train.select_dtypes(include=[np.number]).columns
+        
+        # If no numerical columns, skip
+        if len(num_cols) == 0:
+            continue
+        
+        scaler = StandardScaler()
+        scaler.fit(X_train[num_cols]) # Fit only on train
+        
+        # Copy to avoid modifying original references
+        X_train_scaled = X_train.copy()
+        X_test_scaled = X_test.copy()
+        
+        # Apply scaling
+        X_train_scaled[num_cols] = scaler.transform(X_train_scaled[num_cols])
+        X_test_scaled[num_cols] = scaler.transform(X_test_scaled[num_cols])
+        
+        # Update dict
+        data["X_train"] = X_train_scaled
+        data["X_test"] = X_test_scaled
+        
     return split_dict
 
 
@@ -155,6 +152,6 @@ def prepare_datasets(
     datasets = load_datasets(dataset_names)
     XY = split_X_y(datasets)
     splits = create_train_test_splits(XY, test_size=test_size, seed=seed)
-    splits = apply_feature_selection(splits, k=k_features)
+    splits = apply_scaling(splits)
     
     return splits
