@@ -11,7 +11,7 @@ from torch import nn, optim
 from torch.utils.data import DataLoader, TensorDataset
 import time
 from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE
-from src.custom_smote import CustomSMOTE
+from cor_smote import CorSMOTE
 
 
 # Función que lee los resultados de un csv y los carga en un diccionario
@@ -43,13 +43,13 @@ def csv_to_dict(csv):
 
 def measure_default_times(X_dict, y_dict, sampling_technique, params, n_runs=10):
     """
-    Calcula el tiempo de ejecución de SMOTE, Borderline-SMOTE, ADASYN y Custom SMOTE
+    Calcula el tiempo de ejecución de SMOTE, Borderline-SMOTE, ADASYN y CorSMOTE
     usando los parámetros por defecto.
 
     Args:
         X_dict (dict): diccionario con datasets de entrada, {nombre: X}.
         y_dict (dict): diccionario con etiquetas, {nombre: y}.
-        custom_smote_class (class, optional): clase de tu Custom SMOTE. Si None, se omite.
+        custom_smote_class (class, optional): clase de tu CorSMOTE. Si None, se omite.
         n_runs (int): número de veces que se va a ejecutar cada técnica.
 
     Returns:
@@ -75,10 +75,10 @@ def measure_default_times(X_dict, y_dict, sampling_technique, params, n_runs=10)
                 kind = params[ds_name]['best_params']['sampler__kind']
                 sampler = BorderlineSMOTE(k_neighbors=neighbors,kind=kind, random_state=42)
                 
-            if sampling_technique == "CUSTOM":
+            if sampling_technique == "CorSMOTE":
                 neighbors = params[ds_name]['best_params']['sampler__k_neighbors']
                 top_k = params[ds_name]['best_params']['sampler__top_k_features']
-                sampler = CustomSMOTE(k_neighbors=neighbors, top_k_features=top_k, random_state=42)
+                sampler = CorSMOTE(k_neighbors=neighbors, top_k_features=top_k, random_state=42)
 
             _,_ = sampler.fit_resample(X,y)
 

@@ -226,4 +226,4 @@ def analyze_results(filename="results.pkl", output_txt="results_report.txt"):
 
 
 if __name__ == "__main__":
-    analyze_results()
+    analyze_results("results_rf_42.pkl")

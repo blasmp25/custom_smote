@@ -17,7 +17,7 @@ def load_datasets(names: Optional[List[str]]=None) -> Dict[str, pd.DataFrame]:
     :return: Dictionary {filename: dataframe}
     """
     
-    print("[INFO] Loading datasets...")
+    # print("[INFO] Loading datasets...")
     
     # If no names were provided, load all CSV files in the directory
     if names is None:
@@ -25,6 +25,7 @@ def load_datasets(names: Optional[List[str]]=None) -> Dict[str, pd.DataFrame]:
             f for f in os.listdir(DATASET_DIR)
             if os.path.isfile(os.path.join(DATASET_DIR, f)) and f.endswith(".csv")
         ]
+        
         
     datasets = {}
     
@@ -74,7 +75,7 @@ def create_train_test_splits(XY_dict: Dict[str, Tuple],
     :return: Dictionary {filename: {"X_train", "X_test", "y_train", "y_test"}}
     """
     
-    print("[INFO] Creating training and testing data...")
+    # print("[INFO] Creating training and testing data...")
     
     result = {}
     
@@ -101,7 +102,7 @@ def apply_scaling(
     The scaler is fitted ONLY on X_train to avoid data leakage.
     """
     
-    print("[INFO] Applying standard scaling to numerical features...")
+    # print("[INFO] Applying standard scaling to numerical features...")
     
     for name, data in split_dict.items():
         X_train = data["X_train"]
