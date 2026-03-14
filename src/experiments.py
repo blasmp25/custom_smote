@@ -43,7 +43,7 @@ def tune_sampler_for_dataset(X_train, y_train, smote_type, seed):
     cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=seed)
     scorer = make_scorer(f1_score, average='macro')
 
-    grid = GridSearchCV(pipe, param_grid, scoring=scorer, cv=cv, n_jobs=-1, verbose=0, error_score=np.nan)
+    grid = GridSearchCV(pipe, param_grid, scoring=scorer, cv=cv, n_jobs=1, verbose=0, error_score=np.nan)
     
     try:
         grid.fit(X_train, y_train)
@@ -94,7 +94,7 @@ def optimize_models_parameters(X, y, models, param_grids, seed):
             param_grid=param_grids[model_name],
             cv=cv,
             scoring="f1_macro",
-            n_jobs=-1,
+            n_jobs=1,
             verbose=0,
             error_score=np.nan
         )

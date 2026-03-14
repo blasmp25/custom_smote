@@ -15,7 +15,7 @@ import pandas as pd
 import numpy as np
 # Ignorar solo los warnings de DataConversionWarning (nombre de columnas)
 warnings.filterwarnings("ignore", category=UserWarning, message="X does not have valid feature names*")
-
+cpus_asignadas = int(os.getenv('SLURM_CPUS_PER_TASK', 1))
 
 MODELS_MAP = {
     'rf' : 'Random Forest',
@@ -89,9 +89,9 @@ def run_training_pipeline(
         np.random.seed(seed)
 
         current_models = {
-            'Random Forest': RandomForestClassifier(random_state=seed, n_jobs=-1),
-            'XGBoost': XGBClassifier(eval_metric='logloss', random_state=seed, n_jobs=-1),
-            'LightGBM': LGBMClassifier(random_state=seed, verbosity=-1, n_jobs=-1)
+            'Random Forest': RandomForestClassifier(random_state=seed, n_jobs=cpus_asignadas),
+            'XGBoost': XGBClassifier(eval_metric='logloss', random_state=seed, n_jobs=cpus_asignadas),
+            'LightGBM': LGBMClassifier(random_state=seed, verbosity=-1, n_jobs=cpus_asignadas)
         }
         # Filter to only the models requested via CLI
         active_models = {k: v for k, v in current_models.items() if k in models}
@@ -323,6 +323,13 @@ if __name__ == "__main__":
         )
     )
     
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Specific seed"
+    )
+    
     args = parser.parse_args()
     
     if args.samplers is None:
@@ -344,9 +351,18 @@ if __name__ == "__main__":
     selected_models = [MODELS_MAP[m] for m in selected_models]
 
     results_df = pd.DataFrame(columns=['Model', 'Accuracy', 'Precision', 'Recall', 'F1', 'dataset', 'ratio', 'sampler', 'seed', 'n_classes', "nrows", "nfeat"])  
-    for iter in tqdm(range(30)):
+    
+    if args.seed is not None:
+        iters = [args.seed]
+        output_csv = f"Resultados_Seed_{args.seed}.csv"
         
-        prepared_datasets = prepare_datasets(dataset_names=args.datasets, seed=iter)
+    else:
+        iters = range(30)
+        output_csv = "TablaResultados_Completa.csv"
+    
+    for current_seed in tqdm(iters):
+        
+        prepared_datasets = prepare_datasets(dataset_names=args.datasets, seed=current_seed)
         sorted_names = sorted(prepared_datasets.keys())
     
         for ds_name in sorted_names:
@@ -358,10 +374,10 @@ if __name__ == "__main__":
                 prepared_datasets=single_ds,
                 models=selected_models,
                 param_grids=param_grids,
-                results_file=args.results_file,
+                results_file=f"results_seed_{current_seed}.pkl",
                 overwrite=args.overwrite,
                 samplers=selected_samplers,
-                seed=iter,
+                seed=current_seed,
                 table = results_df 
             )
-    print(res)
+            results_df.to_csv(output_csv, index=False)
