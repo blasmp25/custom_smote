@@ -377,7 +377,7 @@ if __name__ == "__main__":
                 results_file=f"results_seed_{current_seed}.pkl",
                 overwrite=args.overwrite,
                 samplers=selected_samplers,
-                seed=current_seed,
+                seed=current_seed+16,
                 table = results_df 
             )
             results_df.to_csv(output_csv, index=False)
