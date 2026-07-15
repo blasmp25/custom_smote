@@ -4,9 +4,13 @@ import argparse
 from experiments import optimize_models_parameters, evaluate_models, tune_sampler_for_dataset
 from data_setup import prepare_datasets
 from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, BaggingClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
 from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
+from pytorch_tabnet.tab_model import TabNetClassifier
 from cor_smote import CorSMOTE
 import warnings
 from sklearn.exceptions import DataConversionWarning
@@ -17,36 +21,65 @@ import numpy as np
 warnings.filterwarnings("ignore", category=UserWarning, message="X does not have valid feature names*")
 cpus_asignadas = int(os.getenv('SLURM_CPUS_PER_TASK', 1))
 
+
 MODELS_MAP = {
+    'dt' : 'Decision Tree',
     'rf' : 'Random Forest',
+    'bagging' : 'Bagging',
     'lightgbm' : 'LightGBM',
-    'xgboost' : 'XGBoost'
+    'xgboost' : 'XGBoost',
+    'mlp' : 'MLP',
+    'tabnet' : 'TabNet',
+    'svm' : 'SVM'
 }
 
 # Parámetros a optimizar para cada modelo
 param_grids = {
-    
+    "Decision Tree": {
+        "max_depth": [3, 5, 10, None],
+        "min_samples_split": [2, 5, 10]
+    },
     "Random Forest": {
         "n_estimators": [100, 200],
         "max_depth": [None, 10, 20],
         "max_features": ["sqrt", "log2"]
     },
-    
+    "Bagging": {
+        "n_estimators": [50, 100, 200],
+        "max_samples": [0.5, 0.8, 1.0]
+    },
     "XGBoost": {
         "n_estimators": [100, 200],
         "max_depth": [3, 6, 10],
         "learning_rate": [0.01, 0.1, 0.2]
     },
-    
+    "MLP": {
+        "hidden_layer_sizes": [(50,), (100,), (100,50)],
+        "activation": ["relu"],
+        "alpha": [0.0001],
+    },
+    "TabNet": {
+        "n_d": [8,16],
+        "n_a": [8,16],
+        "n_steps": [3,5],
+        "gamma": [1.3,1.5]
+    },
+    "SVM": {
+        "C": [0.1,1,10],
+        "gamma": ["scale","auto"],
+        "kernel": ["rbf"]
+    },
     "LightGBM": {
         "n_estimators": [200, 500],
-        "num_leaves": [31, 64],
+        "num_leaves": [31,64],
         "learning_rate": [0.01, 0.05, 0.1],
-        "max_depth": [-1, 10, 20]
+        "max_depth": [-1, 10,20]
     }
+    
 }
 
-SAMPLING_RATIOS = [0.6, 0.8, 1.0]
+
+SAMPLING_RATIOS = [ 0.6, 0.8, 1.0]
 
 
 def run_training_pipeline(
@@ -89,9 +122,16 @@ def run_training_pipeline(
         np.random.seed(seed)
 
         current_models = {
-            'Random Forest': RandomForestClassifier(random_state=seed, n_jobs=cpus_asignadas),
-            'XGBoost': XGBClassifier(eval_metric='logloss', random_state=seed, n_jobs=cpus_asignadas),
-            'LightGBM': LGBMClassifier(random_state=seed, verbosity=-1, n_jobs=cpus_asignadas)
+            'Decision Tree' : DecisionTreeClassifier(random_state=seed),
+            'Random Forest': RandomForestClassifier(random_state=seed, n_jobs=1),
+            'Bagging' : BaggingClassifier(estimator=DecisionTreeClassifier(), random_state=seed, n_jobs=1),
+            'XGBoost': XGBClassifier(eval_metric='logloss', random_state=seed, n_jobs=1),
+            'MLP' : MLPClassifier(max_iter=500, random_state=seed),
+            'TabNet' : TabNetClassifier(verbose=0, seed=seed),
+            'SVM' : SVC(probability=True, random_state=seed),
+            'LightGBM': LGBMClassifier(random_state=seed, verbosity=-1, n_jobs=1)
+            
+            
         }
         # Filter to only the models requested via CLI
         active_models = {k: v for k, v in current_models.items() if k in models}
@@ -99,10 +139,10 @@ def run_training_pipeline(
         dataset = ds_name.split(".")[0]
         results[ds_name] = {}
         
-        # print(f"\n=== Training dataset: {ds_name} ===")
+        print(f"\n=== Training dataset: {ds_name} ===")
         
         # ---------- Original dataset ----------
-        # print("Training on original dataset...")
+        print("Training on original dataset...")
         
         results[ds_name]["Original"] = {
             "X_train": data["X_train"],
@@ -116,10 +156,10 @@ def run_training_pipeline(
         X_test_orig = data["X_test"].copy()
         y_test_orig = data["y_test"].copy()
         values, n_classes = np.unique(y_train_orig, return_counts=True)
-        # print("Optimizing models parameters...")
+        print("Optimizing models parameters...")
         best_model_params = optimize_models_parameters(X_train_orig, y_train_orig, active_models, param_grids, seed=seed)
         
-        # print("Evaluating models...")
+        print("Evaluating models...")
         metrics = evaluate_models(X_train_orig, y_train_orig, X_test_orig, y_test_orig, active_models, best_model_params, seed=seed)
         
         results[ds_name]["Original"]["models"] = {
@@ -139,14 +179,14 @@ def run_training_pipeline(
 
 
             table = pd.concat([table, row.to_frame().T], ignore_index=True)
-            table.to_csv("TablaResultados.csv")
+            #table.to_csv("TablaResultados.csv")
         
         # ------------ Resampled datasets ----------
         for sampler_type in samplers:
-            # print(f"Applying {sampler_type} ...")
+            print(f"Applying {sampler_type} ...")
             
             # Tune sampler parameters
-            # print("Optimizing sampler parameters...")
+            print("Optimizing sampler parameters...")
             tune_type = sampler_type.lower()
             sampler_params = tune_sampler_for_dataset(
                 X_train_orig.to_numpy().copy(),
@@ -194,12 +234,12 @@ def run_training_pipeline(
             }
                 
             # Train models on resampled dataset
-            # print("Optimizing models parameters...")
+            print("Optimizing models parameters...")
             best_model_params = optimize_models_parameters(X_res, y_res, active_models, param_grids, seed=seed)
             
             results[ds_name][sampler_type]["best_model_params"] = best_model_params
             
-            # print("Evaluating models...")
+            print("Evaluating models...")
             
             results[ds_name][sampler_type]["ratios"] = {}
             for ratio in SAMPLING_RATIOS:
@@ -245,10 +285,10 @@ def run_training_pipeline(
                         sampling_strategy=sampling_strategy,
                         random_state=seed
                     )
-                    
+                
                 try:
                     X_res_r, y_res_r = sampler_ratio.fit_resample(X_train_orig, y_train_orig)
-                except ValueError as e:
+                except Exception as e:
                     print(f"[WARN] {sampler_type} with ratio {ratio} failed: {e}")
                     continue  # pasa al siguiente ratio si falla
                 
@@ -266,7 +306,7 @@ def run_training_pipeline(
                     metrics[model]["nfeat"] = X_train_orig.shape[1]
                     row = pd.Series(metrics[model])
                     table = pd.concat([table, row.to_frame().T], ignore_index=True)
-                    table.to_csv("TablaResultados.csv")
+                    #table.to_csv("TablaResultados.csv")
                 
     # Save results
     with open(results_file, "wb") as f:
@@ -316,7 +356,7 @@ if __name__ == "__main__":
         "--models",
         nargs="+",
         default=None,
-        choices=["rf", "lightgbm", "xgboost"],
+        choices=["dt", "rf","bagging", "lightgbm", "xgboost", "mlp", "tabnet", "svm"],
         help=(
             "Models to use. Default: all_models"
             "Options: rf, lightgbm, xgboost"
@@ -333,7 +373,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     if args.samplers is None:
-        selected_samplers = ["smote", "corsmote", "adasyn", "borderline"]
+        selected_samplers = ["smote", "corsmote", "adasyn", "borderline", "safe_level_smote", "smote_ipf", "mdo"]
     
     elif "none" in args.samplers:
         selected_samplers = []
@@ -343,7 +383,7 @@ if __name__ == "__main__":
         
     
     if args.models is None:
-        selected_models = ["rf", "xgboost", "lightgbm"]
+        selected_models = ["dt", "rf","bagging", "lightgbm", "xgboost", "mlp", "tabnet",  "svm"]
     
     else:
         selected_models = args.models
@@ -354,11 +394,11 @@ if __name__ == "__main__":
     
     if args.seed is not None:
         iters = [args.seed]
-        output_csv = f"Resultados_Seed_{args.seed}.csv"
+        #output_csv = f"Resultados_Seed_{args.seed}.csv"
         
     else:
         iters = range(30)
-        output_csv = "TablaResultados_Completa.csv"
+        #output_csv = "TablaResultados_Completa.csv"
     
     for current_seed in tqdm(iters):
         
@@ -366,6 +406,14 @@ if __name__ == "__main__":
         sorted_names = sorted(prepared_datasets.keys())
     
         for ds_name in sorted_names:
+            ds_clean = ds_name.replace(".csv","")
+            
+            if args.seed is not None:
+              output_csv = f"Resultados_Seed_{current_seed}_{ds_clean}.csv"
+              
+            else:
+                output_csv = f"TablaResultados_Completa_{ds_clean}.csv"
+            
             # Create a dictionary with just one dataset to process
             single_ds = {ds_name: prepared_datasets[ds_name]}
             
@@ -374,10 +422,10 @@ if __name__ == "__main__":
                 prepared_datasets=single_ds,
                 models=selected_models,
                 param_grids=param_grids,
-                results_file=f"results_seed_{current_seed}.pkl",
+                results_file=f"results_seed_{current_seed}_{ds_clean}.pkl",
                 overwrite=args.overwrite,
                 samplers=selected_samplers,
-                seed=current_seed+16,
+                seed=current_seed,
                 table = results_df 
             )
             results_df.to_csv(output_csv, index=False)

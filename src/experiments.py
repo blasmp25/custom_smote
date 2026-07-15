@@ -1,5 +1,5 @@
 import numpy as np
-
+import os
 from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
@@ -9,6 +9,8 @@ from imblearn.pipeline import Pipeline
 from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE
 from cor_smote import CorSMOTE
 
+cpus_asignadas = int(os.getenv('SLURM_CPUS_PER_TASK', 1))
+
 
 def tune_sampler_for_dataset(X_train, y_train, smote_type, seed):
     """
@@ -17,8 +19,8 @@ def tune_sampler_for_dataset(X_train, y_train, smote_type, seed):
     Retorna un dict con 'best_params' y 'best_score'.
     """
 
-    X_train = X_train.astype(float)
-    y_train = y_train.astype(int)
+    X_train = np.array(X_train, dtype=np.float32)
+    y_train = np.array(y_train, dtype=np.int64)
     
     rf = RandomForestClassifier(random_state=seed)
 
@@ -38,12 +40,15 @@ def tune_sampler_for_dataset(X_train, y_train, smote_type, seed):
         pipe = Pipeline([('sampler', BorderlineSMOTE(random_state=seed)), ('clf', rf)])
         param_grid = {'sampler__k_neighbors': [3, 5, 7, 9], 'sampler__kind': ['borderline-1', 'borderline-2']}
     else:
-        raise ValueError("smote_type debe ser uno de: 'corsmote', 'smote', 'adasyn', 'borderline'")
+        raise ValueError(
+            "smote_type debe ser uno de: 'corsmote', 'smote', 'adasyn', "
+            "'borderline', 'safe_level_smote', 'smote_ipf', 'mdo'"
+        )
 
-    cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=seed)
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=seed)
     scorer = make_scorer(f1_score, average='macro')
 
-    grid = GridSearchCV(pipe, param_grid, scoring=scorer, cv=cv, n_jobs=1, verbose=0, error_score=np.nan)
+    grid = GridSearchCV(pipe, param_grid, scoring=scorer, cv=cv, verbose=0, error_score=np.nan, n_jobs=cpus_asignadas)
     
     try:
         grid.fit(X_train, y_train)
@@ -74,7 +79,23 @@ def optimize_models_parameters(X, y, models, param_grids, seed):
     cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=seed)
     
     for model_name, model in models.items():
-        # print(f"   ⚙️ Optimizing {model_name} ...")
+        grid_dict = param_grids.get(model_name, {})
+        num_combinations = np.prod([len(v) for v in grid_dict.values()]) if grid_dict else 0
+        
+        
+        if num_combinations <=1:
+          print(f"    ⏩ Skipping optimization for {model_name} (Fixed parameters)...")
+          if grid_dict:
+            best_params = {k: v[0] for k, v in grid_dict.items()}
+          else:
+            best_params = {}
+                
+            results[model_name] = best_params
+          continue # Saltamos directamente al siguiente modelo del bucle
+        
+        
+        
+        print(f"   ⚙️ Optimizing {model_name} ...")
         
         # Manejo especial si el modelo requiere array en lugar de DataFrame
         X_fit = X.values if hasattr(X, "values") else X
@@ -88,13 +109,16 @@ def optimize_models_parameters(X, y, models, param_grids, seed):
         #if model_name == "TabTransformer":
         #    model = TabTransformerClassifier(num_features=X_fit.shape[1])
         
+        
+        
+        
         # GridSearchCV
         grid = GridSearchCV(
             estimator=model,
             param_grid=param_grids[model_name],
             cv=cv,
             scoring="f1_macro",
-            n_jobs=1,
+            n_jobs=cpus_asignadas,
             verbose=0,
             error_score=np.nan
         )
@@ -111,27 +135,6 @@ def optimize_models_parameters(X, y, models, param_grids, seed):
     return results
 
 
-# Función que evalua un modelo sobre un conjunto de datos y devuelve las métricas de evaluación en un diccionario
-def evaluate_model(name, model, X, y, kf):
-    scoring = {
-        "accuracy": make_scorer(accuracy_score),
-        "precision": make_scorer(precision_score, zero_division=0, average='weighted'),
-        "recall": make_scorer(recall_score, zero_division=0, average='weighted'),
-        "f1": make_scorer(f1_score, zero_division=0, average='weighted'),
-        #"roc_auc": make_scorer(roc_auc_score, multi_class='ovr', average='weighted')
-    }
-    scores = cross_validate(model, X, y, cv=kf, scoring=scoring)
-
-    results = {
-        "Model": name,
-        "Accuracy": scores['test_accuracy'].mean(),
-        "Precision": scores['test_precision'].mean(),
-        "Recall": scores['test_recall'].mean(),
-        "F1": scores['test_f1'].mean()
-        #"ROC AUC": scores['test_roc_auc'].mean()
-    }
-
-    return results
 
 
 def evaluate_model(name, model, X_train, y_train, X_test, y_test):
